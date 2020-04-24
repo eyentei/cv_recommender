@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
   <head>
     <title>Video Stream</title>
   </head>
@@ -11,3 +12,21 @@
 </form>
   </body>
 </html>
+<script>
+$(window).unload(function () {
+
+        $.ajax({
+          type: 'GET',
+          async: false,
+          url: '/stop',
+
+        });
+          return "Bye now!";
+     });
+
+
+
+
+
+
+</script>
