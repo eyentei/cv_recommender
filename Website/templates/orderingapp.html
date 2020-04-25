@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="description" content="Simple interface to make some music using a raspberry pi">
+    <meta name="author" content="Robert Filter">
+    <link rel="icon" href="">
+    <title>CV recommender</title>
+    <!-- Bootstrap core CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+  </head>
+
+  <body>
+<div class="container-fluid">
+  <ul class="nav nav-tabs nav-justified" id="myTab" role="tablist" style="font-size:22px">
+  <li class="nav-item" >
+    <a class="nav-link active" id="recommendations-tab" data-toggle="tab" href="#recommendations" role="tab" aria-controls="recommendations" aria-selected="true">Recommendations</a>
+  </li>
+  <li class="nav-item" >
+    <a class="nav-link" id="menu-tab" data-toggle="tab" href="#menu" role="tab" aria-controls="menu" aria-selected="false">Menu</a>
+  </li>
+  <li class="nav-item" >
+    <a class="nav-link" id="orders-tab" data-toggle="tab" href="#orders" role="tab" aria-controls="orders" aria-selected="false">Your Orders</a>
+  </li>
+</ul></div>
+<div class="tab-content" id="myTabContent">
+  <div class="tab-pane fade show active" id="recommendations" role="tabpanel" aria-labelledby="ecommendations-tab">
+    <div id ='recs-div' class="container" style="overflow-y: scroll; overflow-x: hidden; margin-top:20px;height:50vh; background-color:white;">
+
+    {% include 'recommendations.html' %}
+    </div>
+  </div>
+  <div class="tab-pane fade" id="menu" role="tabpanel" aria-labelledby="menu-tab">
+    <div class="container" style="overflow-y: scroll; overflow-x: hidden; margin-top:20px;height:50vh; background-color:white;">
+
+    {% include 'menu.html' %}
+  </div>
+</div>
+  <div class="tab-pane fade" id="orders" role="tabpanel" aria-labelledby="orders-tab">
+    <div id ='orders-div' class="container" style="overflow-y: scroll; overflow-x: hidden; margin-top:20px;height:50vh; background-color:white;">
+
+{% include 'orders.html' %}  </div>
+</div>
+</div>
+
+
+      <div class='container' style="overflow-y: scroll; margin-top:10px;height:30vh; background-color:WhiteSmoke;">
+        <div id='cart' class='row'></div>
+      </div>
+
+      <div class='container' style='width:100%;margin-top:10px;margin-bottom:5px;height:5vh'>
+        <a class="btn btn-lg btn-warning" id='order-btn' style='position:relative;left:50%;'>Order</a>
+      </div>
+
+  </body>
+
+
+  <script>
+
+  $('#order-btn').on("click", function(){
+    var items = []
+    $('#cart').children('div').each(function(){
+      items.push($(this).attr('item-id'));
+    });
+    $.ajax({
+           url: "/order",
+           type:'POST',
+           data: JSON.stringify(items),
+           contentType: "application/json",
+           dataType:'JSON',
+           success: function(result) {
+
+             $('#cart').empty();
+
+            $.ajax({
+               url: "/updorders",
+               type: "get",
+               success: function(response) {
+                 $("#orders-div").html(response);
+               }});
+
+            $.ajax({url: "/updrecs",
+            type: "get",
+            success: function(response) {
+              $("#recs-div").html(response);
+            }});
+           }
+      });
+  });
+
+  $(document).on('click', '.x', function(){
+    $(this).parent().remove();});
+
+
+    function repeat(id){
+      $("[td-id='"+id+"']").each(function() {
+          var name  = $(this).html();
+          var id = $(this).attr('itm-id');
+
+        var markup = "<div class='col-md-2 order-div' item-id='"+id+"'><div style='height:50px;'><h5>"+name+"</h5></div><button type='button' class='btn btn-danger x'>x</button></div>";
+        $("#cart").append(markup);
+      })}
+
+
+    function add(u){
+
+          $(u).css('opacity','0.1');
+           var itm = $(u).attr("item-name");
+           var itm_id = $(u).attr("item-id");
+
+
+           var markup = "<div class='col-md-2 order-div' item-id='"+itm_id+"'><div style='height:50px;'><h5>"+itm+"</h5></div><button type='button' class='btn btn-danger x'>x</button></div>";
+           $("#cart").append(markup);
+
+           setTimeout(function () {
+                   $(u).css('opacity','1');
+               }.bind(u), 150);
+
+
+     }
+
+  </script>
+</html>

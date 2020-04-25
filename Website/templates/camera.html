@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+<script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+
+  <body background="{{url_for('static', filename ='images/background.jpg')}}" style='background-size:cover'>
+
+  <div class="container">
+    <img style = 'width: 1100px;height: 600px;'src="{{ url_for('video_feed') }}" />
+  </div>
+
+    <form action="/" method="post">
+        <button class="btn btn-lg btn-warning" id='login' style='position:relative;left:50%;' disabled>Log In</button>
+    </form>
+
+  </body>
+</html>
+
+<script>
+
+window.onunload = function stopCamera(event) {
+  if (!navigator.sendBeacon) return;
+
+  var status = navigator.sendBeacon('/stop');
+
+};
+
+var x = '';
+var idx = setInterval(isFaceFound,1000);
+
+function isFaceFound (){
+
+fetch("{{ url_for('video_feed') }}", {method:'HEAD'}).then(response => response.headers)
+  .then(result => x=result.get('face_found'));
+          //alert(response.headers.get('face_found')); // application/json; charset=utf-8
+          if (x==1) {
+            $('#login').removeAttr('disabled');
+            clearInterval(idx);
+
+          }
+     }
+
+
+
+
+</script>
