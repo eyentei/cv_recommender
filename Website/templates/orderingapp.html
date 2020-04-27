@@ -47,25 +47,28 @@
 </div>
 </div>
 
-
-      <div class='container' style="overflow-y: scroll; margin-top:10px;height:30vh; background-color:WhiteSmoke;">
+      <div class='container' style="overflow-y: scroll; margin-top:10px;height:25vh; background-color:WhiteSmoke;">
         <div id='cart' class='row'></div>
       </div>
 
       <div class='container' style='width:100%;margin-top:10px;margin-bottom:5px;height:5vh'>
         <a class="btn btn-lg btn-warning" id='order-btn' style='position:relative;left:50%;'>Order</a>
+        <img id='loading' height="100" width="100" style='position:relative;left:50%;' src= "{{url_for('static', filename ='images/burgercat.gif')}}">
       </div>
 
   </body>
 
 
   <script>
+  $('#loading').hide()
 
   $('#order-btn').on("click", function(){
     var items = []
     $('#cart').children('div').each(function(){
       items.push($(this).attr('item-id'));
     });
+    $('#order-btn').hide()
+    $('#loading').show()
     $.ajax({
            url: "/order",
            type:'POST',
@@ -73,6 +76,8 @@
            contentType: "application/json",
            dataType:'JSON',
            success: function(result) {
+             $('#loading').hide()
+             $('#order-btn').show()
 
              $('#cart').empty();
 

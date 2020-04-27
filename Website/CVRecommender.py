@@ -1,5 +1,3 @@
-from User import User
-from VideoProcessing import VideoProcessing
 import psycopg2 as pg
 import pandas as pd
 import numpy as np
@@ -7,10 +5,9 @@ import turicreate as tc
 import time
 from collections import Counter
 
+
 class CVRecommender(object):
     def __init__(self):
-        self.user = User()
-        self.vp = VideoProcessing()
         self.connection = self.connectToDB()
 
     def connectToDB(self):
@@ -26,26 +23,23 @@ class CVRecommender(object):
         except Exception as e:
             self.connection = self.connectToDB()
 
-    def yieldFrames(self):
-        while self.vp.isActive:
-            frame, self.user = self.vp.get_frame(self.user)
-            yield (b'--frame\r\n'+ b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
 
-    def makeOrder(self, data):
+    def makeOrder(self, userID, data):
         cursor = self.connection.cursor()
-        cursor.execute("INSERT into orders(user_id) VALUES (%s) RETURNING order_id;", (self.user.ID,))
+        cursor.execute("INSERT into orders(user_id) VALUES (%s) RETURNING order_id;", (userID,))
         order_id = cursor.fetchone()[0]
         for item_id in data:
             cursor.execute("INSERT into orders_items(order_id,item_id) VALUES (%s, %s);",(order_id,item_id))
         self.connection.commit()
         cursor.close()
 
-    def getUserID(self):
+    def getUserID(self,user):
+        vec = list(np.fromstring(user['descriptors'][1:-1], dtype=float, sep=', '))
 
         cursor = self.connection.cursor()
         cursor.execute("SELECT * FROM (SELECT user_id, vector, \
                         (cube_distance(users.vector, cube(%s))) AS dist FROM users) AS t \
-                        WHERE dist < 0.45 ORDER BY dist LIMIT 1;",(list(self.user.descriptors[0]),))
+                        WHERE dist < 0.45 ORDER BY dist LIMIT 1;",(vec,))
         # если таких совпадений по порогу несколько (что практически невозможно), то берем самого похожего
 
         id = cursor.fetchone()
@@ -57,32 +51,34 @@ class CVRecommender(object):
             #cursor.execute(f"UPDATE users SET vector = cube(array{upd}) WHERE user_id = {result[0]}")#update
             #connection.commit()
             cursor.close()
-            self.user.ID = id[0]
+            return id[0]
         else:
             print('you are not in the base yet')
             # если нет в базе, то просто добавляем его
+            n_age = 0
             age_list = [(0,17),(18,24),(25,34),(35,44),(45,54),(55,64),(65,100)]
             for i, a in enumerate(age_list):
-                if a[0] <= self.user.age <= a[1]:
+                if a[0] <= int(user['age']) <= a[1]:
                     n_age = i+1
                     break
             cursor.execute("INSERT INTO users(vector,gender,age_group_id) \
                             VALUES(cube(%s),%s,%s) RETURNING user_id",
-                            (list(self.user.descriptors[0]),bool(self.user.gender),int(n_age)))
+                            (vec,bool(int(user['gender'])),int(n_age)))
 
             id = cursor.fetchone()[0]
             self.connection.commit()
             cursor.close()
-            self.user.ID = id
+            return id
 
 
-    def getOrders(self):
+    def getOrders(self,userID):
         cursor = self.connection.cursor()
+
         cursor.execute("SELECT o.order_id, array_agg(i.item_name), array_agg(i.item_id)\
                         FROM orders o,items i, orders_items oi \
                         WHERE o.user_id = %s AND oi.item_id = i.item_id AND o.order_id = oi.order_id \
                         GROUP BY o.order_id",
-                        (self.user.ID,))
+                        (userID,))
         pr_orders = cursor.fetchall()
         pr_orders.sort(reverse=True)
         orders = []
@@ -103,7 +99,7 @@ class CVRecommender(object):
         cursor.close()
         return items
 
-    def getRecommendations(self, n_recs):
+    def getRecommendations(self, userID, n_recs):
         cursor = self.connection.cursor()
         cursor.execute("SELECT i.item_id \
                         FROM items i, orders_items oi \
@@ -153,11 +149,11 @@ class CVRecommender(object):
 
         t3=time.time()
 
-        item_based=icr.recommend([self.user.ID], n_recs)
-        interaction_based=rfr.recommend([self.user.ID], n_recs)
+        item_based=icr.recommend([userID], n_recs)
+        interaction_based=rfr.recommend([userID], n_recs)
 
         cursor.execute("SELECT vector, age_group_id, gender FROM users \
-                        WHERE user_id = %s",(self.user.ID,))
+                        WHERE user_id = %s",(userID,))
         curr_user = cursor.fetchone()
         vec = list(np.fromstring(curr_user[0][1:-1], dtype=float, sep=', '))
 
@@ -213,7 +209,7 @@ class CVRecommender(object):
                     'Similar By Content:',
                     "Similar By Interactions:"]
 
-        cursor.execute("SELECT count(order_id) FROM orders WHERE user_id=%s",(self.user.ID,))
+        cursor.execute("SELECT count(order_id) FROM orders WHERE user_id=%s",(userID,))
         num_orders = cursor.fetchone()[0]
 
         if num_orders<1:
