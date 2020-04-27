@@ -24,15 +24,14 @@ class VideoProcessing(object):
         response = requests.post(self.url, data=imgByteArr, headers=headers)
         r = response.json()
         if r['status'] == 'success':
-            font = ImageFont.truetype('static/fonts/JosefinSans-Regular.ttf', 25)
-            draw = ImageDraw.Draw(img)
+            #font = ImageFont.truetype('static/fonts/JosefinSans-Regular.ttf', 25)
+            #draw = ImageDraw.Draw(img)
             data = r['data']
 
             self.descriptors.append(data['descriptor'])
             self.descriptors = [np.mean(self.descriptors,axis=0)]
             n_age = np.dot(data['ages'][0], list(range(101)))
             n_gender = np.argmax(data['genders'][0])
-            print(data['genders'])
             if self.age is not None:
                 self.age = 0.95 * self.age + 0.05 * n_age
             else:
@@ -43,9 +42,7 @@ class VideoProcessing(object):
             else:
                 self.gender = n_gender
 
-            draw.text((10, 10), 'Age: '+str(int(np.round(self.age))), (0, 255, 255), font=font)
-            draw.text((10, 30), 'Gender: '+self.gender_list[int(np.round(self.gender))], (0, 255, 255), font=font)
             r = redis.StrictRedis(host='localhost', port='6379', password='', decode_responses=True)
             r.hmset(id, {'age':int(np.round(self.age)),'gender':int(np.round(self.gender)),'descriptors':json.dumps(list(self.descriptors[0]))})
 
-        return img
+            return f'Age: {str(int(np.round(self.age)))}|Gender: {self.gender_list[int(np.round(self.gender))]}'

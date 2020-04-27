@@ -62,20 +62,21 @@ def index():
 
 def gen(id):
     while True:
-        frame = camera.get_frame(id)
-        yield (b'--frame\r\n'
-               b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+        tx = camera.get_data(id)
+        text = tx if tx is not None else ''
+        yield f'data:{text}\n\n'
 
-@app.route('/video_feed',methods=["GET", "HEAD"])
+@app.route('/overlay_feed',methods=["GET", "HEAD"])
 def video_feed():
     if request.method == 'GET':
-        return Response(stream_with_context(gen(session.get('sid'))), mimetype='multipart/x-mixed-replace; boundary=frame')
+        return Response(stream_with_context(gen(session.get('sid'))), mimetype='text/event-stream')
     elif request.method == 'HEAD':
         resp = Response()
         r = redis.StrictRedis(host='localhost', port='6379', password='', decode_responses=True)
         k = r.hget(session.get('sid'),'age')
         resp.headers['face_found'] = 1 if int(json.loads(k)) > 0 else 0
         return resp
+
 
 @app.route('/updrecs')
 def updrecs():

@@ -46,7 +46,7 @@ def data():
 
 if __name__ == '__main__':
     detector = dlib.get_frontal_face_detector()
-    sp = dlib.shape_predictor('models/shape_predictor_5_face_landmarks.dat')
+    sp = dlib.shape_predictor('models/shape_predictor_68_face_landmarks.dat')
     facerec = dlib.face_recognition_model_v1( 'models/dlib_face_recognition_resnet_model_v1.dat') #
     model = keras.models.load_model('models/model.h5')
     app.run(debug=True,port=5050)
