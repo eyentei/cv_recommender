@@ -13,9 +13,9 @@
 
             <video autoplay="true" id="videoElement" style='width: 640px;height: 480px;background-color: #666;top: 40px;'>
             </video>
-          <!--  <img id="imageElement" src="{{ url_for('video_feed') }}" style='width: 640px;height: 480px;background-color: #666;'>-->
+          <!--  <img id="imageElement" src="" style='width: 640px;height: 480px;background-color: #666;'>-->
             <canvas id="canvasElement" style='width: 640px;height: 480px;display: none;'></canvas>
-            <div style='position: absolute;top:5%;left:25%;z-index:1;' class="overlayText"><p id='topText' style='color: YellowGreen;font-size: 40px;align-self:center;text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black;'></p></div>
+            <div style='position: absolute;top:5%;left:27%;z-index:1;' class="overlayText"><p id='topText' style='color: YellowGreen;font-size: 40px;align-self:center;text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black;'></p></div>
         </div>
 
 
@@ -32,25 +32,21 @@
     $('#loading').hide()
     $('#login').on('click',function(){$('#login').hide();$('#loading').show()})
 
-         $(document).ready(function(){
+    $(document).ready(function(){
 
-           let eventSource = new EventSource("/overlay_feed");
+          /* let eventSource = new EventSource("/overlay_feed");
 
             eventSource.onmessage = function(event) {
+	      alert('aaaaa');
               var obj = $("#topText").text(event.data);
               obj.html(obj.html().replace('|','<br/>'));
 
             };
+		 var x = '';
+  		 var idx = setInterval(isFaceFound,1000);
+              function isFaceFound (){
 
-// или eventSource.addEventListener('message', ...)
-
-
-               var x = '';
-               var idx = setInterval(isFaceFound,1000);
-
-               function isFaceFound (){
-
-               fetch("{{ url_for('video_feed') }}", {method:'HEAD'}).then(response => response.headers)
+               fetch("", {method:'HEAD'}).then(response => response.headers)
                  .then(result => x=result.get('face_found'));
                          console.log('a')
                          //alert(response.headers.get('face_found')); // application/json; charset=utf-8
@@ -59,7 +55,7 @@
                            clearInterval(idx);
 
                          }
-                    }
+                    }*/
            let namespace = "/cvr";
            let video = document.querySelector("#videoElement");
            let canvas = document.querySelector("#canvasElement");
@@ -79,11 +75,19 @@
              let dataURL = canvas.toDataURL('image/jpeg');
              socket.emit('input image', dataURL);
            }
-
-           socket.on('connect', function() {
-             console.log('Connected!');
+			
+           socket.on('agegender', function(msg) {
+		   if (msg) {
+		   
+		   
+	     var obj = $("#topText").text(msg);
+			   obj.html(obj.html().replace('|','<br/>'));
+		  
+		   $('#login').removeAttr('disabled')
+		   }
            });
 
+           
            var constraints = {
              video: {
                width: { min: 640 },

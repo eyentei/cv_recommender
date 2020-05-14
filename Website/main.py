@@ -1,8 +1,10 @@
+import eventlet
+eventlet.monkey_patch()
 from sys import stdout
 from video_processing import VideoProcessing
 import logging
 from flask import Flask, render_template, Response,request,stream_with_context,session,jsonify,redirect,url_for
-from flask_socketio import SocketIO
+from flask_socketio import SocketIO,emit
 from camera import Camera
 from utils import base64_to_pil_image, pil_image_to_base64
 from CVRecommender import CVRecommender
@@ -10,12 +12,13 @@ import redis
 import uuid
 import json
 from datetime import datetime, timedelta
+from flask_cors import CORS, cross_origin
 app = Flask(__name__)
-DEBUG=True
+cors=CORS(app)
 # Check Configuration section for more details
 app.config.from_object(__name__)
+app.config['CORS_HEADERS']='Content-Type'
 
-app = Flask(__name__)
 app.logger.addHandler(logging.StreamHandler(stdout))
 app.config['SECRET_KEY'] = 'secret!'
 app.config['DEBUG'] = True
@@ -27,7 +30,8 @@ camera = Camera(VideoProcessing())
 def get_input(input):
     input = input.split(",")[1]
     camera.enqueue_input(input)
-
+    res = next(gen())
+    emit('agegender',res)
 @app.route('/',methods=["GET", "POST"])
 def index():
     if request.method =='GET':
@@ -35,7 +39,7 @@ def index():
         cvr.testConnection()
         session['sid']=str(uuid.uuid4())
         r = redis.StrictRedis(host='localhost', port='6379', password='', decode_responses=True)
-        r.hmset(session.get('sid'), {'age':0,'gender':0,'descriptors':0})
+        r.hmset(session.get('sid'), {'age':-1,'gender':-1,'descriptors':0})
         ttl = timedelta(hours=1)
         r.expire(name=session.get('sid'), time=ttl)
         session['loggedIn'] = False
@@ -59,17 +63,29 @@ def index():
             return render_template('orderingapp.html',prev_orders=orders,food_items=items,recs=recs)
 
 
-
-def gen(id):
+@stream_with_context
+def gen():
     while True:
-        tx = camera.get_data(id)
-        text = tx if tx is not None else ''
-        yield f'data:{text}\n\n'
+        id = session.get('sid')
+        camera.get_data(id)
+        #print(tx)
+        
+        #if tx is not None:
+        r = redis.StrictRedis(host='localhost', port='6379', password='', decode_responses=True)
+        age = int(r.hget(id,'age'))
+        gender = int(r.hget(id,'gender'))
+        gs = ['Female','Male']
+            #text,sid = tx
+        if age != -1 and gender != -1:   
+            yield f"Age: {age}|Gender: {gs[gender]}"
 
+
+'''
 @app.route('/overlay_feed',methods=["GET", "HEAD"])
+@cross_origin()
 def video_feed():
     if request.method == 'GET':
-        return Response(stream_with_context(gen(session.get('sid'))), mimetype='text/event-stream')
+        return Response(gen(), mimetype='text/event-stream')
     elif request.method == 'HEAD':
         resp = Response()
         r = redis.StrictRedis(host='localhost', port='6379', password='', decode_responses=True)
@@ -77,7 +93,7 @@ def video_feed():
         resp.headers['face_found'] = 1 if int(json.loads(k)) > 0 else 0
         return resp
 
-
+'''
 @app.route('/updrecs')
 def updrecs():
         cvr = CVRecommender()
